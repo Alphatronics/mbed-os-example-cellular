@@ -20,6 +20,7 @@
 #include "CellularDevice.h"
 #include "UDPSocket.h"
 #include "CellularLog.h"
+#include "Binbeat_testing.h"
 
 #define UDP 0
 #define TCP 1
@@ -51,7 +52,7 @@ static void trace_release()
 
 static char time_st[50];
 
-static char* trace_time(size_t ss)
+static char *trace_time(size_t ss)
 {
     snprintf(time_st, 49, "[%08llums]", Kernel::get_ms_count());
     return time_st;
@@ -60,7 +61,7 @@ static char* trace_time(size_t ss)
 static void trace_open()
 {
     mbed_trace_init();
-    mbed_trace_prefix_function_set( &trace_time );
+    mbed_trace_prefix_function_set(&trace_time);
 
     mbed_trace_mutex_wait_function_set(trace_wait);
     mbed_trace_mutex_release_function_set(trace_release);
@@ -78,25 +79,29 @@ static void trace_close()
 }
 #endif // #if MBED_CONF_MBED_TRACE_ENABLE
 
-Thread dot_thread(osPriorityNormal, 512);
+Thread dot_thread(osPriorityNormal, 1024);
 
 void print_function(const char *format, ...)
 {
     trace_mutex.lock();
     va_list arglist;
-    va_start( arglist, format );
+    va_start(arglist, format);
     vprintf(format, arglist);
-    va_end( arglist );
+    va_end(arglist);
     trace_mutex.unlock();
 }
 
 void dot_event()
 {
-    while (true) {
-        ThisThread::sleep_for(4000);
-        if (iface && iface->get_connection_status() == NSAPI_STATUS_GLOBAL_UP) {
+    while (true)
+    {
+        ThisThread::sleep_for(1000);
+        if (iface && iface->get_connection_status() == NSAPI_STATUS_GLOBAL_UP)
+        {
             break;
-        } else {
+        }
+        else
+        {
             trace_mutex.lock();
             printf(".");
             fflush(stdout);
@@ -113,15 +118,23 @@ nsapi_error_t do_connect()
     nsapi_error_t retcode = NSAPI_ERROR_OK;
     uint8_t retry_counter = 0;
 
-    while (iface->get_connection_status() != NSAPI_STATUS_GLOBAL_UP) {
+    while (iface->get_connection_status() != NSAPI_STATUS_GLOBAL_UP)
+    {
         retcode = iface->connect();
-        if (retcode == NSAPI_ERROR_AUTH_FAILURE) {
+        if (retcode == NSAPI_ERROR_AUTH_FAILURE)
+        {
             print_function("\n\nAuthentication Failure. Exiting application\n");
-        } else if (retcode == NSAPI_ERROR_OK) {
+        }
+        else if (retcode == NSAPI_ERROR_OK)
+        {
             print_function("\n\nConnection Established.\n");
-        } else if (retry_counter > RETRY_COUNT) {
+        }
+        else if (retry_counter > RETRY_COUNT)
+        {
             print_function("\n\nFatal connection failure: %d\n", retcode);
-        } else {
+        }
+        else
+        {
             print_function("\n\nCouldn't connect: %d, will retry\n", retcode);
             retry_counter++;
             continue;
@@ -150,12 +163,13 @@ nsapi_error_t test_send_recv()
 #endif
 
 #if MBED_CONF_APP_SOCK_TYPE == NONIP
-    retcode = sock.open((CellularContext*)iface);
+    retcode = sock.open((CellularContext *)iface);
 #else
     retcode = sock.open(iface);
 #endif
 
-    if (retcode != NSAPI_ERROR_OK) {
+    if (retcode != NSAPI_ERROR_OK)
+    {
 #if MBED_CONF_APP_SOCK_TYPE == TCP
         print_function("TCPSocket.open() fails, code: %d\n", retcode);
 #elif MBED_CONF_APP_SOCK_TYPE == UDP
@@ -173,21 +187,25 @@ nsapi_error_t test_send_recv()
     sock.set_timeout(15000);
 
 #if MBED_CONF_APP_SOCK_TYPE == NONIP
-    retcode = sock.send((void*) echo_string, strlen(echo_string));
-    if (retcode < 0) {
+    retcode = sock.send((void *)echo_string, strlen(echo_string));
+    if (retcode < 0)
+    {
         print_function("CellularNonIPSocket.send() fails, code: %d\n", retcode);
         return -1;
-    } else {
+    }
+    else
+    {
         print_function("CellularNonIPSocket: Sent %d Bytes\n", retcode);
     }
 
-    n = sock.recv((void*) recv_buf, sizeof(recv_buf));
+    n = sock.recv((void *)recv_buf, sizeof(recv_buf));
 
 #else
 
     SocketAddress sock_addr;
     retcode = iface->gethostbyname(host_name, &sock_addr);
-    if (retcode != NSAPI_ERROR_OK) {
+    if (retcode != NSAPI_ERROR_OK)
+    {
         print_function("Couldn't resolve remote host: %s, code: %d\n", host_name, retcode);
         return -1;
     }
@@ -196,38 +214,48 @@ nsapi_error_t test_send_recv()
 
 #if MBED_CONF_APP_SOCK_TYPE == TCP
     retcode = sock.connect(sock_addr);
-    if (retcode < 0) {
+    if (retcode < 0)
+    {
         print_function("TCPSocket.connect() fails, code: %d\n", retcode);
         return -1;
-    } else {
+    }
+    else
+    {
         print_function("TCP: connected with %s server\n", host_name);
     }
-    retcode = sock.send((void*) echo_string, strlen(echo_string));
-    if (retcode < 0) {
+    retcode = sock.send((void *)echo_string, strlen(echo_string));
+    if (retcode < 0)
+    {
         print_function("TCPSocket.send() fails, code: %d\n", retcode);
         return -1;
-    } else {
+    }
+    else
+    {
         print_function("TCP: Sent %d Bytes to %s\n", retcode, host_name);
     }
 
-    n = sock.recv((void*) recv_buf, sizeof(recv_buf));
+    n = sock.recv((void *)recv_buf, sizeof(recv_buf));
 #else
 
-    retcode = sock.sendto(sock_addr, (void*) echo_string, strlen(echo_string));
-    if (retcode < 0) {
+    retcode = sock.sendto(sock_addr, (void *)echo_string, strlen(echo_string));
+    if (retcode < 0)
+    {
         print_function("UDPSocket.sendto() fails, code: %d\n", retcode);
         return -1;
-    } else {
+    }
+    else
+    {
         print_function("UDP: Sent %d Bytes to %s\n", retcode, host_name);
     }
 
-    n = sock.recvfrom(&sock_addr, (void*) recv_buf, sizeof(recv_buf));
+    n = sock.recvfrom(&sock_addr, (void *)recv_buf, sizeof(recv_buf));
 #endif
 #endif
 
     sock.close();
 
-    if (n > 0) {
+    if (n > 0)
+    {
         print_function("Received from echo server %d Bytes\n", n);
         return 0;
     }
@@ -237,6 +265,8 @@ nsapi_error_t test_send_recv()
 
 int main()
 {
+    board_powerup();
+
     print_function("\n\nmbed-os-example-cellular\n");
     print_function("\n\nBuilt: %s, %s\n", __DATE__, __TIME__);
 #ifdef MBED_CONF_NSAPI_DEFAULT_CELLULAR_PLMN
@@ -263,20 +293,17 @@ int main()
 
     nsapi_error_t retcode = NSAPI_ERROR_NO_CONNECTION;
 
-    /* Attempt to connect to a cellular network */
-    if (do_connect() == NSAPI_ERROR_OK) {
+    // Attempt to connect to a cellular network
+    if (do_connect() == NSAPI_ERROR_OK)
         retcode = test_send_recv();
-    }
 
-    if (iface->disconnect() != NSAPI_ERROR_OK) {
+    if (iface->disconnect() != NSAPI_ERROR_OK)
         print_function("\n\n disconnect failed.\n\n");
-    }
 
-    if (retcode == NSAPI_ERROR_OK) {
+    if (retcode == NSAPI_ERROR_OK)
         print_function("\n\nSuccess. Exiting \n\n");
-    } else {
+    else
         print_function("\n\nFailure. Exiting \n\n");
-    }
 
 #if MBED_CONF_MBED_TRACE_ENABLE
     trace_close();
@@ -286,4 +313,5 @@ int main()
 
     return 0;
 }
+
 // EOF
